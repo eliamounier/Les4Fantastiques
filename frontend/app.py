@@ -278,3 +278,20 @@ if st.button("Do your magic! ✨"):
             file_name=file_name,
             mime="application/pdf",
         )
+
+# -------------------------------
+
+
+# --- Audio Playback ---
+st.write("### 🎧 Listen to the Audiobook")
+
+# Path to the audio file
+audio_file_path = "./data/audiobook_chapter1.mp3"
+
+with open(audio_file_path, "rb") as audio_file:
+    audio_bytes = audio_file.read()
+    st.audio(audio_bytes, format="audio/mpeg")
+    st.success("Enjoy listening to the audiobook!")
+
+
+# -------------------------------

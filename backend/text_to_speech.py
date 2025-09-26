@@ -19,6 +19,6 @@ if __name__ == "__main__":
     the West to the East, with the Danube River wide and deep, reminding me of the old Turkish rule.
     """
     language = "en"  # Change to 'fr' for French, 'it' for Italian, etc.
-    output_file = "audiobook_chapter1.mp3"
+    output_file = "data/audiobook_chapter1.mp3"
     
     text_to_audio(text, language, output_file)
