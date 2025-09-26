@@ -1,6 +1,7 @@
 import requests
 import csv
 import os
+import argparse
 
 
 def query_books(nb_books: int = 100):
@@ -39,8 +40,26 @@ def save_books(books, csv_file: str):
 
 
 def main():
-    books = query_books(nb_books=100)
-    save_books(books, "../../data/books.csv")
+    parser = argparse.ArgumentParser(
+        description="Fetch books from Gutendex and save to CSV."
+    )
+    parser.add_argument(
+        "nb_books",
+        type=int,
+        nargs="?",
+        default=100,
+        help="Number of books to fetch (default: 100)",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="../../data/books.csv",
+        help="Path to output CSV file (default: ../../data/books.csv)",
+    )
+    args = parser.parse_args()
+
+    books = query_books(nb_books=args.nb_books)
+    save_books(books, args.output)
 
 
 if __name__ == "__main__":
