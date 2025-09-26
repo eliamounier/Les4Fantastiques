@@ -39,49 +39,49 @@ def process_text_with_llm(text, level):
     Simulated LLM processing.
     In production, replace with a call to an actual LLM API.
     """
-    import os
-    import openai
+    # import os
+    # import openai
 
-    client = openai.OpenAI(
-        api_key="icPsVlyhOnw2vmGCBvkJFv6pxfh6",
-        base_url="https://api.swisscom.com/layer/swiss-ai-weeks/apertus-70b/v1",
-    )
+    # client = openai.OpenAI(
+    #     api_key="icPsVlyhOnw2vmGCBvkJFv6pxfh6",
+    #     base_url="https://api.swisscom.com/layer/swiss-ai-weeks/apertus-70b/v1",
+    # )
 
-    stream = client.chat.completions.create(
-        model="swiss-ai/Apertus-70B",
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a travel agent. Be descriptive and helpful",
-            },
-            {
-                "role": "user",
-                "content": "What are the best places to visit in Switzerland?",
-            },
-        ],
-        stream=True,
-    )
+    # stream = client.chat.completions.create(
+    #     model="swiss-ai/Apertus-70B",
+    #     messages=[
+    #         {
+    #             "role": "system",
+    #             "content": "You are a travel agent. Be descriptive and helpful",
+    #         },
+    #         {
+    #             "role": "user",
+    #             "content": "What are the best places to visit in Switzerland?",
+    #         },
+    #     ],
+    #     stream=True,
+    # )
 
-    # Collect streamed content into a single string so we can display it in the app
-    response_text = ""
-    for chunk in stream:
-        # try attribute access first, fall back to dict-style access
-        try:
-            content = chunk.choices[0].delta.content or ""
-        except Exception:
-            try:
-                content = chunk["choices"][0]["delta"].get("content", "") or ""
-            except Exception:
-                content = ""
-        response_text += content
-        # keep printing for debugging / logs as before
-        print(content, end="", flush=True)
+    # # Collect streamed content into a single string so we can display it in the app
+    # response_text = ""
+    # for chunk in stream:
+    #     # try attribute access first, fall back to dict-style access
+    #     try:
+    #         content = chunk.choices[0].delta.content or ""
+    #     except Exception:
+    #         try:
+    #             content = chunk["choices"][0]["delta"].get("content", "") or ""
+    #         except Exception:
+    #             content = ""
+    #     response_text += content
+    #     # keep printing for debugging / logs as before
+    #     print(content, end="", flush=True)
 
-    # Fallback if the stream returned nothing
-    if not response_text:
-        response_text = f"Processed text for level {level}:\n\n{text}"
+    # # Fallback if the stream returned nothing
+    # if not response_text:
+    #     response_text = f"Processed text for level {level}:\n\n{text}"
 
-    return response_text
+    return text
 
 
 def create_pdf(output_text):
@@ -89,8 +89,15 @@ def create_pdf(output_text):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
-    elements = [Paragraph(output_text, styles["Normal"])]
-    elements.append(Spacer(1, 12))
+    elements = []
+
+    # Process text in chunks to avoid memory overhead
+    chunk_size = 1000  # Number of characters per chunk
+    for i in range(0, len(output_text), chunk_size):
+        chunk = output_text[i : i + chunk_size]
+        elements.append(Paragraph(chunk, styles["Normal"]))
+        elements.append(Spacer(1, 12))
+
     doc.build(elements)
     buffer.seek(0)
     return buffer
