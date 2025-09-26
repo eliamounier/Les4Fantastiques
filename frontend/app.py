@@ -51,7 +51,7 @@ def read_text_file(filepath):
         return f.read()
 
 
-def process_text_with_llm(text, level):
+def process_text_with_llm(text, level, target_language=None):
     """
     Simulated LLM processing.
     Replace with a real LLM API call in production.
@@ -78,11 +78,30 @@ def create_pdf(output_text):
     return buffer
 
 
-def download_book(book_id, title, fmt="txt", save_dir="./data/books"):
-    """Download a book from Project Gutenberg."""
+def download_book(book_id, title, fmt='txt', save_dir='./data/books'):
+    """Download a book from Project Gutenberg and clean it up."""
     Path(save_dir).mkdir(parents=True, exist_ok=True)
     filename = f"{sanitize_filename(title)}.{fmt}"
     filepath = Path(save_dir) / filename
+
+    # Helper function to preprocess text
+    def preprocess_gutenberg_text(text):
+        """
+        Keep only the text between the START and END markers
+        of a Project Gutenberg book.
+        """
+        start_marker = "START OF THE PROJECT GUTENBERG"
+        end_marker = "END OF THE PROJECT GUTENBERG"
+
+        # Find positions of the start and end markers
+        start_idx = text.find(start_marker)
+        end_idx = text.find(end_marker)
+
+        if start_idx != -1 and end_idx != -1:
+            return text[start_idx + len(start_marker):end_idx].strip()
+        else:
+            # If markers not found, return original text
+            return text.strip()
 
     urls = [
         f"https://www.gutenberg.org/files/{book_id}/{book_id}-0.{fmt}",
@@ -94,14 +113,22 @@ def download_book(book_id, title, fmt="txt", save_dir="./data/books"):
         try:
             response = requests.get(url, timeout=30)
             response.raise_for_status()
-            with open(filepath, "wb") as f:
-                f.write(response.content)
+
+
+            # Decode and clean the text before saving
+            raw_text = response.content.decode('utf-8', errors='replace')
+            cleaned_text = preprocess_gutenberg_text(raw_text)
+
+            # Save the cleaned text
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(cleaned_text)
             return filepath
         except requests.RequestException:
             continue
 
     st.error(f"Failed to download: {title}")
     return None
+
 
 
 def similarity_score(a, b):
@@ -190,19 +217,41 @@ with tab2:
         st.success(f"Uploaded: {uploaded_file.name}")
         st.session_state["book_text"] = read_file(uploaded_file)
 
-# --- Language level ---
-level = st.selectbox("Choose language level", ["A1", "A2", "B1", "B2", "C1", "C2"])
+# --- Language level and translation target ---
+st.write("### Choose Processing Options")
 
+col1, col2 = st.columns([1, 2])  # Left column is narrower
+
+with col1:
+    level = st.selectbox(
+        "Language Level",
+        ["A1", "A2", "B1", "B2", "C1", "C2"],
+        help="Choose the language proficiency level for simplification"
+    )
+
+with col2:
+    target_language = st.text_input(
+        "Target Language",
+        placeholder="e.g., Spanish, French, German",
+        help="Enter the language to translate the text into"
+    )
+
+# Ensure target_language is never empty
+if not target_language.strip():
+    target_language = "original language"
+
+
+# --- Process button ---
 # --- Process button ---
 if st.button("Do your magic! ✨"):
     if "book_text" not in st.session_state or not st.session_state["book_text"]:
         st.warning("Please select or upload a book before processing.")
     else:
         text = st.session_state["book_text"]
-        st.info("Processing with LLM...")
+        st.info(f"Processing text for level {level} and translating to {target_language}...")
 
-        # Process text
-        processed_text = process_text_with_llm(text, level)
+        # Always pass a non-empty target_language
+        processed_text = process_text_with_llm(text, level, target_language)
 
         # Display processed text
         st.text_area("Processed Text", value=processed_text, height=300)
@@ -227,3 +276,4 @@ if st.button("Do your magic! ✨"):
             file_name=file_name,
             mime="application/pdf",
         )
+
