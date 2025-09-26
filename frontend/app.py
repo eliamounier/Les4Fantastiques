@@ -59,12 +59,8 @@ def create_pdf(output_text):
     styles = getSampleStyleSheet()
     elements = []
 
-    # Process text in chunks to avoid memory overhead
-    chunk_size = 1000  # Number of characters per chunk
-    for i in range(0, len(output_text), chunk_size):
-        chunk = output_text[i : i + chunk_size]
-        elements.append(Paragraph(chunk, styles["Normal"]))
-        elements.append(Spacer(1, 12))
+    # Combine all chunks into a single paragraph to avoid line breaks
+    elements.append(Paragraph(output_text, styles["Normal"]))
 
     doc.build(elements)
     buffer.seek(0)
@@ -228,9 +224,9 @@ with col1:
 
 with col2:
     target_language = st.text_input(
-        "Target Language",
+        "Language you want to learn",
         placeholder="e.g., Spanish, French, German",
-        help="Enter the language to translate the text into",
+        help="Enter the language to translate (if needed) the text into",
     )
 
 # Ensure target_language is never empty
@@ -248,11 +244,20 @@ if st.button("Do your magic! ✨"):
             f"Processing text for level {level} and translating to {target_language}..."
         )
 
-        # Stream the processed text incrementally
-        st.write_stream(stream_response(text, level, target_language))
+        # Aggregate the streamed response
+        aggregated_response = []
+        placeholder = st.empty()  # Placeholder for dynamic updates
 
-        # Generate PDF
-        pdf_file = create_pdf(text)  # Use the full text directly for PDF generation
+        for chunk in stream_response(text, level, target_language):
+            aggregated_response.append(chunk)
+            # Update the placeholder with the current aggregated text
+            placeholder.write("".join(aggregated_response))
+
+        # Combine all chunks into a single string
+        full_response = "".join(aggregated_response)
+
+        # Generate PDF using the aggregated response
+        pdf_file = create_pdf(full_response)
 
         st.success("Processing complete! Download your simplified book below:")
         # Build filename dynamically
