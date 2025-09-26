@@ -1,0 +1,18 @@
+# environnements virtuels
+.venv/
+env/
+
+# fichiers Python compilés
+__pycache__/
+*.py[cod]
+
+# notebooks
+.ipynb_checkpoints/
+
+# données
+data/
+outputs/
+
+# OS
+.DS_Store
+Thumbs.db
