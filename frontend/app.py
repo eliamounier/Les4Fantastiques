@@ -78,7 +78,7 @@ def create_pdf(output_text):
     return buffer
 
 
-def download_book(book_id, title, fmt='txt', save_dir='./data/books'):
+def download_book(book_id, title, fmt="txt", save_dir="./data/books"):
     """Download a book from Project Gutenberg and clean it up."""
     Path(save_dir).mkdir(parents=True, exist_ok=True)
     filename = f"{sanitize_filename(title)}.{fmt}"
@@ -98,7 +98,7 @@ def download_book(book_id, title, fmt='txt', save_dir='./data/books'):
         end_idx = text.find(end_marker)
 
         if start_idx != -1 and end_idx != -1:
-            return text[start_idx + len(start_marker):end_idx].strip()
+            return text[start_idx + len(start_marker) : end_idx].strip()
         else:
             # If markers not found, return original text
             return text.strip()
@@ -114,13 +114,12 @@ def download_book(book_id, title, fmt='txt', save_dir='./data/books'):
             response = requests.get(url, timeout=30)
             response.raise_for_status()
 
-
             # Decode and clean the text before saving
-            raw_text = response.content.decode('utf-8', errors='replace')
+            raw_text = response.content.decode("utf-8", errors="replace")
             cleaned_text = preprocess_gutenberg_text(raw_text)
 
             # Save the cleaned text
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 f.write(cleaned_text)
             return filepath
         except requests.RequestException:
@@ -128,7 +127,6 @@ def download_book(book_id, title, fmt='txt', save_dir='./data/books'):
 
     st.error(f"Failed to download: {title}")
     return None
-
 
 
 def similarity_score(a, b):
@@ -207,6 +205,9 @@ with tab1:
                 selected_book_title = book_options[selected_book_id]
                 text = read_text_file(filepath)
                 st.session_state["book_text"] = text
+                st.session_state["book_title"] = (
+                    selected_book_title  # Save title in session state
+                )
 
 # --- TAB 2: Upload file ---
 with tab2:
@@ -216,6 +217,9 @@ with tab2:
     if uploaded_file:
         st.success(f"Uploaded: {uploaded_file.name}")
         st.session_state["book_text"] = read_file(uploaded_file)
+        st.session_state["book_title"] = uploaded_file.name.rsplit(".", 1)[
+            0
+        ]  # Save title in session state
 
 # --- Language level and translation target ---
 st.write("### Choose Processing Options")
@@ -226,14 +230,14 @@ with col1:
     level = st.selectbox(
         "Language Level",
         ["A1", "A2", "B1", "B2", "C1", "C2"],
-        help="Choose the language proficiency level for simplification"
+        help="Choose the language proficiency level for simplification",
     )
 
 with col2:
     target_language = st.text_input(
         "Target Language",
         placeholder="e.g., Spanish, French, German",
-        help="Enter the language to translate the text into"
+        help="Enter the language to translate the text into",
     )
 
 # Ensure target_language is never empty
@@ -242,13 +246,14 @@ if not target_language.strip():
 
 
 # --- Process button ---
-# --- Process button ---
 if st.button("Do your magic! ✨"):
     if "book_text" not in st.session_state or not st.session_state["book_text"]:
         st.warning("Please select or upload a book before processing.")
     else:
         text = st.session_state["book_text"]
-        st.info(f"Processing text for level {level} and translating to {target_language}...")
+        st.info(
+            f"Processing text for level {level} and translating to {target_language}..."
+        )
 
         # Always pass a non-empty target_language
         processed_text = process_text_with_llm(text, level, target_language)
@@ -261,13 +266,9 @@ if st.button("Do your magic! ✨"):
 
         st.success("Processing complete! Download your simplified book below:")
         # Build filename dynamically
-        if selected_book_title:
-            base_name = sanitize_filename(selected_book_title)
-        elif uploaded_file:
-            base_name = sanitize_filename(uploaded_file.name.rsplit(".", 1)[0])
-        else:
-            base_name = "processed_book"
-
+        base_name = sanitize_filename(
+            st.session_state.get("book_title", "processed_book")
+        )
         file_name = f"{base_name}_level_{level}_{target_language}.pdf"
 
         st.download_button(
@@ -276,4 +277,3 @@ if st.button("Do your magic! ✨"):
             file_name=file_name,
             mime="application/pdf",
         )
-
