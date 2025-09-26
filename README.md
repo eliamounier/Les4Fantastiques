@@ -29,8 +29,7 @@ pip install -r requirements.txt
 
 Once the environment is set up, run a script:
 ```bash
-cd backend
-python3 book_loader.py
+python -m streamlit run frontend/app.py
 ```
 
 ---
