@@ -11,6 +11,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 import os
 import re
 from pathlib import Path
+from difflib import SequenceMatcher
 
 # -------------------------------
 # Helper functions
@@ -95,6 +96,12 @@ def download_book(book_id, title, fmt='txt', save_dir='./data/books'):
     st.error(f"Failed to download: {title}")
     return None
 
+
+def similarity_score(a, b):
+    """Compute a similarity score between two strings."""
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+
 # -------------------------------
 # Load book list
 # -------------------------------
@@ -130,12 +137,32 @@ with tab1:
 
     # Load CSV
     books_df = load_books_from_csv("../data/books.csv")
-    
-    # Create selection
+
+    # Search bar
+    search_query = st.text_input("Search for a book or author")
+
+    if search_query:
+        # Compute similarity score for each book
+        books_df["relevance"] = books_df["name_author"].apply(lambda x: similarity_score(search_query, x))
+        
+        # Filter by some threshold and sort
+        books_df = books_df[books_df["relevance"] > 0.2]  # Filter low-relevance results
+        books_df = books_df.sort_values(by="relevance", ascending=False)
+    else:
+        # If no search query, just show the default list
+        books_df["relevance"] = 1.0
+
+    # Create options dynamically
     book_options = {
         row["id"]: row["name_author"] for _, row in books_df.iterrows()
     }
-    selected_book_id = st.selectbox("Select a book", options=list(book_options.keys()), format_func=lambda x: book_options[x])
+
+    # Streamlit selectbox for book selection
+    selected_book_id = st.selectbox(
+        "Select a book",
+        options=list(book_options.keys()),
+        format_func=lambda x: book_options[x]
+    )
 
     if st.button("Download Book"):
         with st.spinner("Downloading book..."):
