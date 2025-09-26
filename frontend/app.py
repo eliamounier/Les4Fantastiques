@@ -133,7 +133,7 @@ def similarity_score(a, b):
 # Load book list
 # -------------------------------
 
-@st.cache_data
+
 def load_books_from_csv(csv_path="../data/books.csv"):
     # Get the folder where the app.py file is located
     base_dir = Path(__file__).parent
@@ -197,8 +197,9 @@ with tab1:
             if filepath:
                 st.success(f"Downloaded: {book_options[selected_book_id]}")
                 selected_book_title = book_options[selected_book_id]
-                text = read_text_file(filepath)
-                st.session_state["book_text"] = text
+                st.session_state["book_text"] = read_text_file(filepath)
+                st.session_state["selected_book_id"] = selected_book_id
+                st.session_state["selected_book_title"] = book_options[selected_book_id]
 
 # --- TAB 2: Upload file ---
 with tab2:
@@ -206,6 +207,8 @@ with tab2:
     if uploaded_file:
         st.success(f"Uploaded: {uploaded_file.name}")
         st.session_state["book_text"] = read_file(uploaded_file)
+        st.session_state["selected_book_id"] = None
+        st.session_state["selected_book_title"] = uploaded_file.name
 
 # --- Language level and translation target ---
 st.write("### Choose Processing Options")
@@ -237,7 +240,7 @@ if st.button("Do your magic! ✨"):
     if "book_text" not in st.session_state or not st.session_state["book_text"]:
         st.warning("Please select or upload a book before processing.")
     else:
-        text = st.session_state["book_text"]
+        text = st.session_state["book_text"].strip()
         st.info(f"Processing text for level {level} and translating to {target_language}...")
 
         # Always pass a non-empty target_language
