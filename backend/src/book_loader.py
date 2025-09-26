@@ -24,9 +24,9 @@ def sanitize_filename(name):
     """Sanitize filenames to remove invalid characters."""
     return re.sub(r'[<>:"/\\|?*]', '', name).strip()
 
-def download_book(book_id, title, fmt='txt', save_dir='books'):
+def download_book(book_id, title, fmt='txt', save_dir='./data/books'):
     """Download a book from Project Gutenberg."""
-    Path(save_dir).mkdir(exist_ok=True)
+    Path(save_dir).mkdir(parents=True, exist_ok=True)
     filename = f"{sanitize_filename(title)}.{fmt}"
     urls = [
         f"https://www.gutenberg.org/files/{book_id}/{book_id}-0.{fmt}",
