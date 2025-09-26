@@ -8,7 +8,7 @@ CHAPTER_SPLIT = re.compile(r"\n{4,}")
 TEXT_SEPARATORS = ["\n\n", "\n", ". ", "! ", "? "]
 
 
-def _split_into_chapters(text):
+def _split_into_chapters(text: str):
     """
     Split text into chapters using 4+ newlines as a delimiter.
     """
@@ -37,7 +37,7 @@ def _split_chapters(chapter_content: str, max_words: int):
     return chunks
 
 
-def create_and_save_chunks(book: str):
+def create_chunks(book: str):
     """
     Create list of chunks from the book text.
     Each chunk is a dictionary with 'Chapter', 'Part', and 'Content'.
@@ -54,8 +54,5 @@ def create_and_save_chunks(book: str):
                 "Content": splitted[i],
                 }
             for i in range(len(splitted))]
-        
-    with open("../../data/chunks.json", "w", encoding="utf-8") as f:
-        json.dump(chunks, f, indent=4, ensure_ascii=False)
 
-    return 0
+    return chunks
