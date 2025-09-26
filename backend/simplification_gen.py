@@ -1,6 +1,6 @@
 import os
 import openai
-from simplification_gen import create_chunks
+from chunk_creation import create_chunks
 
 LEVEL = "B2"
 
