@@ -3,7 +3,7 @@ charset-normalizer==3.4.3
 idna==3.10
 requests==2.32.5
 urllib3==2.5.0
-openai==0.27.8
+openai==1.109.1
 streamlit==1.50.0
 python-docx==1.2.0
 reportlab==4.4.4
