@@ -72,10 +72,29 @@ def create_pdf(output_text):
     return buffer
 
 def download_book(book_id, title, fmt='txt', save_dir='./data/books'):
-    """Download a book from Project Gutenberg."""
+    """Download a book from Project Gutenberg and clean it up."""
     Path(save_dir).mkdir(parents=True, exist_ok=True)
     filename = f"{sanitize_filename(title)}.{fmt}"
     filepath = Path(save_dir) / filename
+
+    # Helper function to preprocess text
+    def preprocess_gutenberg_text(text):
+        """
+        Keep only the text between the START and END markers
+        of a Project Gutenberg book.
+        """
+        start_marker = "START OF THE PROJECT GUTENBERG"
+        end_marker = "END OF THE PROJECT GUTENBERG"
+
+        # Find positions of the start and end markers
+        start_idx = text.find(start_marker)
+        end_idx = text.find(end_marker)
+
+        if start_idx != -1 and end_idx != -1:
+            return text[start_idx + len(start_marker):end_idx].strip()
+        else:
+            # If markers not found, return original text
+            return text.strip()
 
     urls = [
         f"https://www.gutenberg.org/files/{book_id}/{book_id}-0.{fmt}",
@@ -87,14 +106,22 @@ def download_book(book_id, title, fmt='txt', save_dir='./data/books'):
         try:
             response = requests.get(url, timeout=30)
             response.raise_for_status()
-            with open(filepath, 'wb') as f:
-                f.write(response.content)
+
+            # Decode and clean the text before saving
+            raw_text = response.content.decode('utf-8', errors='replace')
+            cleaned_text = preprocess_gutenberg_text(raw_text)
+
+            # Save the cleaned text
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(cleaned_text)
+
             return filepath
         except requests.RequestException:
             continue
 
     st.error(f"Failed to download: {title}")
     return None
+
 
 
 def similarity_score(a, b):
