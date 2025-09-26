@@ -76,7 +76,7 @@ def provide_feedback(text, question, user_response, language):
     Here is the USER'S RESPONSE:
     {user_response}
 
-    Please provide feedback on my response.
+    Please provide feedback on my response. Do not repeat the question. Do not over-explain.
     """
 
     client = openai.OpenAI(
