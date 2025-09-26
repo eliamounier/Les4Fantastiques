@@ -12,6 +12,7 @@ import os
 import re
 from pathlib import Path
 from difflib import SequenceMatcher
+from backend.simplification_gen import stream_response
 
 # -------------------------------
 # Helper functions
@@ -49,14 +50,6 @@ def read_text_file(filepath):
     """Reads text from a saved .txt file."""
     with open(filepath, "r", encoding="utf-8") as f:
         return f.read()
-
-
-def process_text_with_llm(text, level, target_language=None):
-    """
-    Simulated LLM processing.
-    Replace with a real LLM API call in production.
-    """
-    return f"[Simplified to level {level}]\n\n" + text
 
 
 def create_pdf(output_text):
@@ -139,7 +132,6 @@ def similarity_score(a, b):
 # -------------------------------
 
 
-
 def load_books_from_csv(csv_path="../data/books.csv"):
     # Get the folder where the app.py file is located
     base_dir = Path(__file__).parent
@@ -218,9 +210,7 @@ with tab2:
     if uploaded_file:
         st.success(f"Uploaded: {uploaded_file.name}")
         st.session_state["book_text"] = read_file(uploaded_file)
-        st.session_state["book_title"] = uploaded_file.name.rsplit(".", 1)[
-            0
-        ]
+        st.session_state["book_title"] = uploaded_file.name.rsplit(".", 1)[0]
         st.session_state["selected_book_id"] = None
         st.session_state["selected_book_title"] = uploaded_file.name
 
@@ -245,7 +235,7 @@ with col2:
 
 # Ensure target_language is never empty
 if not target_language.strip():
-    target_language = "original language"
+    target_language = "original language of the provided text"
 
 
 # --- Process button ---
@@ -254,16 +244,15 @@ if st.button("Do your magic! ✨"):
         st.warning("Please select or upload a book before processing.")
     else:
         text = st.session_state["book_text"].strip()
-        st.info(f"Processing text for level {level} and translating to {target_language}...")
+        st.info(
+            f"Processing text for level {level} and translating to {target_language}..."
+        )
 
-        # Always pass a non-empty target_language
-        processed_text = process_text_with_llm(text, level, target_language)
-
-        # Display processed text
-        st.text_area("Processed Text", value=processed_text, height=300)
+        # Stream the processed text incrementally
+        st.write_stream(stream_response(text, level, target_language))
 
         # Generate PDF
-        pdf_file = create_pdf(processed_text)
+        pdf_file = create_pdf(text)  # Use the full text directly for PDF generation
 
         st.success("Processing complete! Download your simplified book below:")
         # Build filename dynamically

@@ -1,16 +1,17 @@
 import os
 import openai
-from simplification_gen import create_chunks
+from backend.chunk_creation import create_chunks
 
 LEVEL = "B2"
 
 
 client = openai.OpenAI(
-    api_key=os.getenv("SWISS_AI_PLATFORM_API_KEY"),
-    base_url="https://api.swisscom.com/layer/swiss-ai-weeks/apertus-70b/v1"
+    api_key="icPsVlyhOnw2vmGCBvkJFv6pxfh6",
+    base_url="https://api.swisscom.com/layer/swiss-ai-weeks/apertus-70b/v1",
 )
 
-def stream_response(text: str, level: str, language: str=""):
+
+def stream_response(text: str, level: str, language: str = ""):
 
     chunks = create_chunks(text)
 
@@ -48,8 +49,11 @@ def stream_response(text: str, level: str, language: str=""):
     past_response = ""
     for chunk in chunks:
         user_prompt = f"""
-        I have {level} level {language}. Please simplify this passage into a friendly, story-like narrative.
-        ONLY RETURN THE SIMPLIFIED TEXT — no explanations, notes, or comments.
+        I have {level} level in {language}. Please simplify 
+        the following passage in {language} and according to my level. Do not use any other language than {language}.
+        The purpose is not to change the meaning, but to make it easier for me to understand.
+        Use a friendly, story-like narrative style.
+        ONLY RETURN THE TRANSFORMED TEXT — no explanations, notes, or comments.
 
         {f'''Here is previous passage as context:
         {past_response}
@@ -68,10 +72,10 @@ def stream_response(text: str, level: str, language: str=""):
             model="swiss-ai/Apertus-70B",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
             stream=True,
-            temperature=0
+            temperature=0,
         )
         full_answer = ""
         for token in stream:
