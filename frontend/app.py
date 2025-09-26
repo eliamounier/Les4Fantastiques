@@ -17,9 +17,11 @@ from difflib import SequenceMatcher
 # Helper functions
 # -------------------------------
 
+
 def sanitize_filename(name):
     """Sanitize file names to avoid invalid characters."""
     return re.sub(r'[\\/*?:"<>|]', "_", name)
+
 
 def read_file(file):
     """Reads file content and returns text."""
@@ -35,16 +37,19 @@ def read_file(file):
 
     elif file.name.endswith(".pdf"):
         from PyPDF2 import PdfReader
+
         reader = PdfReader(file)
         return "\n".join([page.extract_text() for page in reader.pages])
 
     else:
         return None
 
+
 def read_text_file(filepath):
     """Reads text from a saved .txt file."""
     with open(filepath, "r", encoding="utf-8") as f:
         return f.read()
+
 
 def process_text_with_llm(text, level):
     """
@@ -52,6 +57,7 @@ def process_text_with_llm(text, level):
     Replace with a real LLM API call in production.
     """
     return f"[Simplified to level {level}]\n\n" + text
+
 
 def create_pdf(output_text):
     """Generate a PDF with the processed text."""
@@ -63,7 +69,7 @@ def create_pdf(output_text):
     # Process text in chunks to avoid memory overhead
     chunk_size = 1000  # Number of characters per chunk
     for i in range(0, len(output_text), chunk_size):
-        chunk = output_text[i: i + chunk_size]
+        chunk = output_text[i : i + chunk_size]
         elements.append(Paragraph(chunk, styles["Normal"]))
         elements.append(Spacer(1, 12))
 
@@ -71,7 +77,8 @@ def create_pdf(output_text):
     buffer.seek(0)
     return buffer
 
-def download_book(book_id, title, fmt='txt', save_dir='./data/books'):
+
+def download_book(book_id, title, fmt="txt", save_dir="./data/books"):
     """Download a book from Project Gutenberg."""
     Path(save_dir).mkdir(parents=True, exist_ok=True)
     filename = f"{sanitize_filename(title)}.{fmt}"
@@ -80,14 +87,14 @@ def download_book(book_id, title, fmt='txt', save_dir='./data/books'):
     urls = [
         f"https://www.gutenberg.org/files/{book_id}/{book_id}-0.{fmt}",
         f"https://www.gutenberg.org/files/{book_id}/{book_id}.{fmt}",
-        f"https://www.gutenberg.org/cache/epub/{book_id}/pg{book_id}.{fmt}"
+        f"https://www.gutenberg.org/cache/epub/{book_id}/pg{book_id}.{fmt}",
     ]
 
     for url in urls:
         try:
             response = requests.get(url, timeout=30)
             response.raise_for_status()
-            with open(filepath, 'wb') as f:
+            with open(filepath, "wb") as f:
                 f.write(response.content)
             return filepath
         except requests.RequestException:
@@ -105,6 +112,7 @@ def similarity_score(a, b):
 # -------------------------------
 # Load book list
 # -------------------------------
+
 
 @st.cache_data
 def load_books_from_csv(csv_path="../data/books.csv"):
@@ -143,8 +151,10 @@ with tab1:
 
     if search_query:
         # Compute similarity score for each book
-        books_df["relevance"] = books_df["name_author"].apply(lambda x: similarity_score(search_query, x))
-        
+        books_df["relevance"] = books_df["name_author"].apply(
+            lambda x: similarity_score(search_query, x)
+        )
+
         # Filter by some threshold and sort
         books_df = books_df[books_df["relevance"] > 0.2]  # Filter low-relevance results
         books_df = books_df.sort_values(by="relevance", ascending=False)
@@ -153,15 +163,13 @@ with tab1:
         books_df["relevance"] = 1.0
 
     # Create options dynamically
-    book_options = {
-        row["id"]: row["name_author"] for _, row in books_df.iterrows()
-    }
+    book_options = {row["id"]: row["name_author"] for _, row in books_df.iterrows()}
 
     # Streamlit selectbox for book selection
     selected_book_id = st.selectbox(
         "Select a book",
         options=list(book_options.keys()),
-        format_func=lambda x: book_options[x]
+        format_func=lambda x: book_options[x],
     )
 
     if st.button("Download Book"):
@@ -175,7 +183,9 @@ with tab1:
 
 # --- TAB 2: Upload file ---
 with tab2:
-    uploaded_file = st.file_uploader("Upload your file", type=["md", "docx", "txt", "pdf"])
+    uploaded_file = st.file_uploader(
+        "Upload your file", type=["md", "docx", "txt", "pdf"]
+    )
     if uploaded_file:
         st.success(f"Uploaded: {uploaded_file.name}")
         st.session_state["book_text"] = read_file(uploaded_file)
@@ -201,9 +211,19 @@ if st.button("Do your magic! ✨"):
         pdf_file = create_pdf(processed_text)
 
         st.success("Processing complete! Download your simplified book below:")
+        # Build filename dynamically
+        if selected_book_title:
+            base_name = sanitize_filename(selected_book_title)
+        elif uploaded_file:
+            base_name = sanitize_filename(uploaded_file.name.rsplit(".", 1)[0])
+        else:
+            base_name = "processed_book"
+
+        file_name = f"{base_name}_level_{level}_{target_language}.pdf"
+
         st.download_button(
             label="📥 Download Processed PDF",
             data=pdf_file,
-            file_name="processed_book.pdf",
+            file_name=file_name,
             mime="application/pdf",
         )
