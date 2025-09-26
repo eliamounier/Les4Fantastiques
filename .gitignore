@@ -1,6 +1,6 @@
 # environnements virtuels
 .venv/
-env/
+book_env/
 
 # fichiers Python compilés
 __pycache__/
