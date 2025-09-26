@@ -2,25 +2,32 @@ import os
 import openai
 from dotenv import load_dotenv
 
-
+# Load environment variables from .env file
 load_dotenv()
 
-def translate_text(text, target_language):
+def generate_question(text, language):
     """
-    Translate the given text into the target language using the LLM.
+    Generate a question to test the user's understanding of the given text.
 
     Args:
-        text (str): The text to translate.
-        target_language (str): The target language for translation.
+        text (str): The text to generate a question from.
+        language (str): The language in which the question should be asked.
 
     Returns:
         None
     """
-    system_prompt = """
-    You are a translator that translates faithfully with no creation, hallucination, or new content in the response text.
+    system_prompt = f"""
+    You are a teaching assistant specialized in language comprehension. You need to test the user on their understanding of the following text. 
+    Do not provide any response to the question. Only ask the question.
     """
+
     user_prompt = f"""
-    TRANSLATE THIS: {text} in {target_language}
+    Test me on this text with a single question.
+
+    Here is the TEXT:
+    {text}
+
+    Please talk to me in {language}.
     """
 
     client = openai.OpenAI(
@@ -40,8 +47,58 @@ def translate_text(text, target_language):
     for chunk in stream:
         print(chunk.choices[0].delta.content or "", end="", flush=True)
 
+
+def provide_feedback(text, question, user_response, language):
+    """
+    Provide feedback on the user's response to the question.
+
+    Args:
+        text (str): The original text.
+        question (str): The question asked.
+        user_response (str): The user's response to the question.
+        language (str): The language in which the feedback should be provided.
+
+    Returns:
+        None
+    """
+    system_prompt = f"""
+    You are a teaching assistant specialized in language comprehension. Your job is to evaluate the my response to a question based on the given text. 
+    Provide constructive feedback in {language}. Be polite and helpful.
+    """
+
+    user_prompt = f"""
+    Here is the TEXT:
+    {text}
+
+    Here is the QUESTION:
+    {question}
+
+    Here is the USER'S RESPONSE:
+    {user_response}
+
+    Please provide feedback on my response. Do not repeat the question. Do not over-explain.
+    """
+
+    client = openai.OpenAI(
+        api_key=os.getenv("SWISS_AI_PLATFORM_API_KEY"),
+        base_url="https://api.swisscom.com/layer/swiss-ai-weeks/apertus-70b/v1"
+    )
+
+    stream = client.chat.completions.create(
+        model="swiss-ai/Apertus-70B",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        stream=True
+    )
+
+    feedback = ""
+    for chunk in stream:
+        feedback += chunk.choices[0].delta.content or ""
+        print(chunk.choices[0].delta.content or "", end="", flush=True)
+
 def main():
-    
     TEXT = '''CHAPTER I: JONATHAN HARKER'S JOURNAL
 
     3 May. Bistritz.
@@ -69,9 +126,17 @@ def main():
     At Bistritz, I stayed at the Golden Krone Hotel. The landlord seemed nervous when I asked about Count Dracula and his castle. 
     He wouldn't talk much, but gave me a letter from the Count.
     '''
-    NEW_LANGUAGE = "French"
 
-    translate_text(TEXT, NEW_LANGUAGE)
+    LANGUAGE_FOR_USER = "English"
+
+    print("\nGenerating a question based on the text...\n")
+    question = generate_question(TEXT, LANGUAGE_FOR_USER)
+
+    # Simulate a user's response
+    user_response = input("\nEnter your response to the question: ")
+
+    print("\nProviding feedback on the user's response...\n")
+    provide_feedback(TEXT, question, user_response, LANGUAGE_FOR_USER)
 
 if __name__ == "__main__":
     main()

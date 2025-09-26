@@ -1,7 +1,10 @@
 import os
 import openai
 from backend.chunk_creation import create_chunks
+from dotenv import load_dotenv
 
+
+load_dotenv()
 LEVEL = "B2"
 
 
