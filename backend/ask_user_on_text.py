@@ -41,6 +41,7 @@ def generate_question(text, language):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
+        max_tokens=500,
         stream=True
     )
 
