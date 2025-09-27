@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 LEVEL = "B2"
+MAX_TOKEN = 6000
 
 
 client = openai.OpenAI(
@@ -22,6 +23,7 @@ def stream_response(chunks: list, level: str, language: str = ""):
     TARGET LEVEL: {level} (CEFR)
 
     CORE RULES (apply all):
+    •⁠  You can ignore table of contents, prefaces, introductions, footnotes. Particularly if we do not give you a previous passage.
     •⁠  ⁠Preserve all facts, names, places, dates, and event sequences exactly
     •⁠  ⁠Do NOT add events, characters, or details not in the original
     •⁠  ⁠Maintain a friendly, engaging narrative voice
@@ -41,8 +43,8 @@ def stream_response(chunks: list, level: str, language: str = ""):
 
     OUTPUT RULES (must follow strictly):
     • ONLY output the simplified passage text. 
-    • DO NOT include explanations, instructions, notes, commentary, summaries, or any extra text.
-    • DO NOT repeat or summarize the original text.
+    • DO NOT include explanations, instructions, commentary, notes for the reader, summaries, or any extra text.
+    • DO NOT repeat or summarize the original text more that what you did to simplify it.
     • Output nothing other than the simplified passage itself.
     """
 
@@ -52,17 +54,18 @@ def stream_response(chunks: list, level: str, language: str = ""):
         I have {level} level in {language}. Please simplify 
         the following passage in {language} and according to my level. Do not use any other language than {language}.
         The purpose is not to change the meaning, but to make it easier for me to understand.
-        Use a friendly, story-like narrative style.
-        ONLY RETURN THE SIMPLIFIED TEXT — do not return explanations, do not include notes, do not make comments.
-
+        Use a friendly, story-like narrative style. Ignore any table of contents, prefaces, introductions, footnotes.
+        
         {f'''Here is previous passage as context:
         {past_response}
 
-        Use this only for continuity - do not repeat or rewrite this content.
+        Use this only for continuity - do not repeat or rewrite this content. If the story does continue, Keep the story going from there.
         ''' if past_response else ''}
 
         Here is the passage to simplify:
         {chunk['Content']}
+        ONLY RETURN THE TRANSFORMED TEXT REPRESENTING THE ORIGINAL TEXT — Do not include explanations, notes, or comments.
+
         """
 
         print(user_prompt)
@@ -76,6 +79,7 @@ def stream_response(chunks: list, level: str, language: str = ""):
             ],
             stream=True,
             temperature=0,
+            max_tokens=MAX_TOKEN,
         )
         full_answer = ""
         for token in stream:
