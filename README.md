@@ -5,7 +5,7 @@ Built for the **Open-Source Foundations for Founders: AI You Can Build On (Apert
 Collaborators: Mickaël Bressieux, Elia Mounier-Poulat, Marina Mannari, Yasmina Haddadi
 ## 🌟 Overview
 
-EasyRead is a safe, engaging platform for language learners of all levels. Users can select books they genuinely enjoy or would love to discover, and have them adapted to their target language and proficiency level (A1, A2, B1, B2, C1, C2). The application enhances the learning journey with integrated audiobook functionality and interactive quizzes throughout the text, creating a comprehensive learning experience.
+EasyRead is a safe, engaging platform for language learners of all levels. Users can select books they genuinely enjoy or would love to discover, and have them adapted to their target language and proficiency level (A1, A2, B1, B2, C1, C2). The application enhances the learning journey with integrated audiobook functionality and interactive quizzes throughout the book reading, creating a comprehensive learning experience.
 
 ## 🚀 Innovation and Future
 
