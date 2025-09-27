@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 LEVEL = "B2"
-MAX_TOKEN = 6000
+MAX_TOKEN = 2000
 
 
 client = openai.OpenAI(
