@@ -97,6 +97,7 @@ def provide_feedback(text, question, user_response, language):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
+        max_tokens=500,
         stream=True
     )
 
