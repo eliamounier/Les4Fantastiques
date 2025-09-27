@@ -3,7 +3,7 @@ import json
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-MAX_WORDS = 6000
+MAX_WORDS = 2000
 CHAPTER_SPLIT = re.compile(r"\n{4,}")
 TEXT_SEPARATORS = ["\n\n", "\n", ". ", "! ", "? "]
 
