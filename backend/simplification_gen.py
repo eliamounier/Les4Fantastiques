@@ -8,9 +8,10 @@ LEVEL = "B2"
 
 
 client = openai.OpenAI(
-    api_key="icPsVlyhOnw2vmGCBvkJFv6pxfh6",
+    api_key=os.getenv("SWISS_AI_PLATFORM_API_KEY"),
     base_url="https://api.swisscom.com/layer/swiss-ai-weeks/apertus-70b/v1",
 )
+
 
 
 def stream_response(chunks: list, level: str, language: str = ""):
@@ -27,7 +28,6 @@ def stream_response(chunks: list, level: str, language: str = ""):
     •⁠  ⁠Simplify syntax and vocabulary to match {level} precisely
     •⁠  ⁠Keep original paragraph structure
     •⁠  ⁠Avoid bullet lists unless in the source text
-    •⁠  ⁠Explain up to 5 challenging words inline: (word: brief definition) - first occurrence only
     •⁠  ⁠Signal any omissions with [...] - keep minimal
     •⁠  ⁠Preserve proper nouns unchanged
     •⁠  ⁠Maintain the emotional tone and intent of any dialogue or quotes
@@ -41,7 +41,7 @@ def stream_response(chunks: list, level: str, language: str = ""):
 
     OUTPUT RULES (must follow strictly):
     • ONLY output the simplified passage text. 
-    • DO NOT include explanations, instructions, commentary, summaries, or any extra text.
+    • DO NOT include explanations, instructions, notes, commentary, summaries, or any extra text.
     • DO NOT repeat or summarize the original text.
     • Output nothing other than the simplified passage itself.
     """
@@ -53,7 +53,7 @@ def stream_response(chunks: list, level: str, language: str = ""):
         the following passage in {language} and according to my level. Do not use any other language than {language}.
         The purpose is not to change the meaning, but to make it easier for me to understand.
         Use a friendly, story-like narrative style.
-        ONLY RETURN THE TRANSFORMED TEXT — no explanations, notes, or comments.
+        ONLY RETURN THE SIMPLIFIED TEXT — do not return explanations, do not include notes, do not make comments.
 
         {f'''Here is previous passage as context:
         {past_response}

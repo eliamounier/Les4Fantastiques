@@ -64,12 +64,8 @@ def create_pdf(output_text):
     styles = getSampleStyleSheet()
     elements = []
 
-    # Process text in chunks to avoid memory overhead
-    chunk_size = 1000  # Number of characters per chunk
-    for i in range(0, len(output_text), chunk_size):
-        chunk = output_text[i : i + chunk_size]
-        elements.append(Paragraph(chunk, styles["Normal"]))
-        elements.append(Spacer(1, 12))
+    # Combine all chunks into a single paragraph to avoid line breaks
+    elements.append(Paragraph(output_text, styles["Normal"]))
 
     doc.build(elements)
     buffer.seek(0)
@@ -265,7 +261,6 @@ with st.container(border=True):
     if not target_language.strip():
         target_language = "original language of the provided text"
 
-
     # --- Process button ---
     if st.button("Do your magic! ✨"):
         if "book_text" not in st.session_state or not st.session_state["book_text"]:
@@ -328,7 +323,7 @@ if st.session_state.can_process:
         st.write_stream(stream_response(chunks, level, target_language))
 
     # Generate PDF
-    pdf_file = create_pdf(text)  # Use the full text directly for PDF generation
+    pdf_file = create_pdf(simplified_chunk)  # Use the full text directly for PDF generation
 
     st.success("Processing complete! Download your simplified book below:")
     # Build filename dynamically
