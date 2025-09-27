@@ -1,18 +1,23 @@
 import streamlit as st
-from io import BytesIO
-from pathlib import Path
 import tempfile
 import requests
 import pandas as pd
+import os
+import re
 from docx import Document
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
-import os
-import re
+from io import BytesIO
 from pathlib import Path
 from difflib import SequenceMatcher
 from backend.simplification_gen import stream_response
+from backend.chunk_creation import create_chunks
+
+import streamlit as st
+import streamlit.components.v1 as components
+
+
 
 # -------------------------------
 # Helper functions
@@ -142,6 +147,9 @@ def load_books_from_csv(csv_path="../data/books.csv"):
 # -------------------------------
 # Streamlit UI
 # -------------------------------
+
+st.set_page_config(layout="wide")
+
 st.title("📘 Learn from your favorite books")
 
 st.write(
@@ -150,120 +158,188 @@ st.write(
     "language level and generate a PDF for you to download."
 )
 
-# Tabs: Choose a book OR upload one
-tab1, tab2 = st.tabs(["Choose from list", "Upload your own"])
+# Initialize session state
+if "pages" not in st.session_state:
+    st.session_state.pages = [""]
+
+if "page" not in st.session_state:
+    st.session_state.page = 0
+
+if "can_process" not in st.session_state:
+    st.session_state.can_process = False
 
 selected_book_id = None
 selected_book_title = None
 
-# --- TAB 1: Select from list ---
-with tab1:
-    st.subheader("Choose a book from Project Gutenberg list")
+# Part: Choose a book OR upload one
 
-    # Load CSV
-    books_df = load_books_from_csv("../data/books.csv")
+with st.container(border=True):
+    st.subheader("Choose a book")
 
-    # Search bar
-    search_query = st.text_input("Search for a book or author")
+    col_list, col_empty, col_own = st.columns([4, 1, 4])  # Left column is narrower
 
-    if search_query:
-        # Compute similarity score for each book
-        books_df["relevance"] = books_df["name_author"].apply(
-            lambda x: similarity_score(search_query, x)
+    # --- TAB 1: Select from list ---
+    with col_list:
+        st.markdown("#### From Project Gutenberg list")
+
+        # Load CSV
+        books_df = load_books_from_csv("../data/books.csv")
+
+        # Search bar
+        search_query = st.text_input("Search for a book or author")
+
+        if search_query:
+            # Compute similarity score for each book
+            books_df["relevance"] = books_df["name_author"].apply(
+                lambda x: similarity_score(search_query, x)
+            )
+
+            # Filter by some threshold and sort
+            books_df = books_df[books_df["relevance"] > 0.2]  # Filter low-relevance results
+            books_df = books_df.sort_values(by="relevance", ascending=False)
+        else:
+            # If no search query, just show the default list
+            books_df["relevance"] = 1.0
+
+        # Create options dynamically
+        book_options = {row["id"]: row["name_author"] for _, row in books_df.iterrows()}
+
+        # Streamlit selectbox for book selection
+        selected_book_id = st.selectbox(
+            "Select a book",
+            options=list(book_options.keys()),
+            format_func=lambda x: book_options[x],
         )
 
-        # Filter by some threshold and sort
-        books_df = books_df[books_df["relevance"] > 0.2]  # Filter low-relevance results
-        books_df = books_df.sort_values(by="relevance", ascending=False)
-    else:
-        # If no search query, just show the default list
-        books_df["relevance"] = 1.0
+        if st.button("Download Book"):
+            with st.spinner("Downloading book..."):
+                filepath = download_book(selected_book_id, book_options[selected_book_id])
+                if filepath:
+                    st.success(f"Downloaded: {book_options[selected_book_id]}")
+                    selected_book_title = book_options[selected_book_id]
+                    st.session_state["book_text"] = read_text_file(filepath)
+                    st.session_state["selected_book_id"] = selected_book_id
+                    st.session_state["selected_book_title"] = book_options[selected_book_id]
+                    st.session_state["book_title"] = (
+                        selected_book_title  # Save title in session state
+                    )
 
-    # Create options dynamically
-    book_options = {row["id"]: row["name_author"] for _, row in books_df.iterrows()}
+    with col_empty:
+        st.markdown("#### or")
 
-    # Streamlit selectbox for book selection
-    selected_book_id = st.selectbox(
-        "Select a book",
-        options=list(book_options.keys()),
-        format_func=lambda x: book_options[x],
-    )
+    # --- TAB 2: Upload file ---
+    with col_own:
+        st.markdown("#### Upload your own book")
 
-    if st.button("Download Book"):
-        with st.spinner("Downloading book..."):
-            filepath = download_book(selected_book_id, book_options[selected_book_id])
-            if filepath:
-                st.success(f"Downloaded: {book_options[selected_book_id]}")
-                selected_book_title = book_options[selected_book_id]
-                st.session_state["book_text"] = read_text_file(filepath)
-                st.session_state["selected_book_id"] = selected_book_id
-                st.session_state["selected_book_title"] = book_options[selected_book_id]
-                st.session_state["book_title"] = (
-                    selected_book_title  # Save title in session state
-                )
-
-# --- TAB 2: Upload file ---
-with tab2:
-    uploaded_file = st.file_uploader(
-        "Upload your file", type=["md", "docx", "txt", "pdf"]
-    )
-    if uploaded_file:
-        st.success(f"Uploaded: {uploaded_file.name}")
-        st.session_state["book_text"] = read_file(uploaded_file)
-        st.session_state["book_title"] = uploaded_file.name.rsplit(".", 1)[0]
-        st.session_state["selected_book_id"] = None
-        st.session_state["selected_book_title"] = uploaded_file.name
+        uploaded_file = st.file_uploader(
+            "Upload your file", type=["md", "docx", "txt", "pdf"]
+        )
+        if uploaded_file:
+            st.success(f"Uploaded: {uploaded_file.name}")
+            st.session_state["book_text"] = read_file(uploaded_file)
+            st.session_state["book_title"] = uploaded_file.name.rsplit(".", 1)[0]
+            st.session_state["selected_book_id"] = None
+            st.session_state["selected_book_title"] = uploaded_file.name
 
 # --- Language level and translation target ---
-st.write("### Choose Processing Options")
+with st.container(border=True):
+    st.write("### Choose Processing Options")
 
-col1, col2 = st.columns([1, 2])  # Left column is narrower
+    col1, col2 = st.columns([1, 2])  # Left column is narrower
 
-with col1:
-    level = st.selectbox(
-        "Language Level",
-        ["A1", "A2", "B1", "B2", "C1", "C2"],
-        help="Choose the language proficiency level for simplification",
-    )
+    with col1:
+        level = st.selectbox(
+            "Language Level",
+            ["A1", "A2", "B1", "B2", "C1", "C2"],
+            help="Choose the language proficiency level for simplification",
+        )
 
-with col2:
-    target_language = st.text_input(
-        "Target Language",
-        placeholder="e.g., Spanish, French, German",
-        help="Enter the language to translate the text into",
-    )
+    with col2:
+        target_language = st.text_input(
+            "Target Language",
+            placeholder="e.g., Spanish, French, German",
+            help="Enter the language to translate the text into",
+        )
 
-# Ensure target_language is never empty
-if not target_language.strip():
-    target_language = "original language of the provided text"
+    # Ensure target_language is never empty
+    if not target_language.strip():
+        target_language = "original language of the provided text"
 
 
-# --- Process button ---
-if st.button("Do your magic! ✨"):
-    if "book_text" not in st.session_state or not st.session_state["book_text"]:
-        st.warning("Please select or upload a book before processing.")
+    # --- Process button ---
+    if st.button("Do your magic! ✨"):
+        if "book_text" not in st.session_state or not st.session_state["book_text"]:
+            st.warning("Please select or upload a book before processing.")
+            st.session_state.can_process = False
+        else:
+            st.info(
+                f"Processing text for level {level} and translating to {target_language}..."
+            )
+            st.session_state.can_process = True
+
+
+if st.session_state.can_process:
+    # Stream the processed text incrementally
+    text = st.session_state["book_text"].strip()
+    chunks = create_chunks(text)
+
+    learning_mode = True
+    if learning_mode:
+
+        n_chunks = len(chunks)
+        st.session_state.pages = [""] * n_chunks
+
+        # Navigation buttons
+        col1, col2, col3 = st.columns([1, 4, 1])
+
+        with col1:
+            if st.session_state.page > 0 and st.button("⬅ Previous") :
+                    st.session_state.page -= 1
+
+        with col2:
+            st.write(f"### Page {st.session_state.page + 1}")
+
+        with col3:
+            if st.session_state.page < n_chunks - 1 and st.button("Next ➡"):
+                st.session_state.page += 1
+
+        # Display the current page
+        page_idx = st.session_state.page
+        if st.session_state.pages[page_idx] == "":
+            # First time visiting this page → stream & collect
+            placeholder = st.empty()
+            simplified_chunk = ""
+            for token in stream_response(
+                [chunks[page_idx]],
+                level,
+                target_language
+            ):
+                simplified_chunk += token
+                # placeholder.write(simplified_chunk)
+                placeholder.markdown(f"<span style='color:white'>{simplified_chunk}</span>", unsafe_allow_html=True)
+            
+            st.session_state.pages[page_idx] = simplified_chunk            
+        else:
+            # Already processed → just show stored result
+            simplified_chunk = st.session_state.pages[page_idx]
+            st.write(simplified_chunk)
+
     else:
-        text = st.session_state["book_text"].strip()
-        st.info(
-            f"Processing text for level {level} and translating to {target_language}..."
-        )
+        st.write_stream(stream_response(chunks, level, target_language))
 
-        # Stream the processed text incrementally
-        st.write_stream(stream_response(text, level, target_language))
+    # Generate PDF
+    pdf_file = create_pdf(text)  # Use the full text directly for PDF generation
 
-        # Generate PDF
-        pdf_file = create_pdf(text)  # Use the full text directly for PDF generation
+    st.success("Processing complete! Download your simplified book below:")
+    # Build filename dynamically
+    base_name = sanitize_filename(
+        st.session_state.get("book_title", "processed_book")
+    )
+    file_name = f"{base_name}_level_{level}_{target_language}.pdf"
 
-        st.success("Processing complete! Download your simplified book below:")
-        # Build filename dynamically
-        base_name = sanitize_filename(
-            st.session_state.get("book_title", "processed_book")
-        )
-        file_name = f"{base_name}_level_{level}_{target_language}.pdf"
-
-        st.download_button(
-            label="📥 Download Processed PDF",
-            data=pdf_file,
-            file_name=file_name,
-            mime="application/pdf",
-        )
+    st.download_button(
+        label="📥 Download Processed PDF",
+        data=pdf_file,
+        file_name=file_name,
+        mime="application/pdf",
+    )
