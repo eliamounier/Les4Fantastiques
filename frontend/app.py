@@ -148,13 +148,20 @@ def load_books_from_csv(csv_path="../data/books.csv"):
 
 st.set_page_config(layout="wide")
 
-st.title("📘 Learn from your favorite books")
+# Header section: Icon + Title vertically aligned
 
-st.write(
-    "Upload a book that you like **OR** choose from a curated list of classic books "
-    "to learn new vocabulary and grammar. The app will adapt the content to your "
-    "language level and generate a PDF for you to download."
-)
+col1, col2 = st.columns([1, 5])  # Left column is narrower
+with col1:
+    st.image("frontend/easylearn_logo.png", width=150)  # Larger icon (adjust width as needed)
+
+with col2:
+    st.title("Learn from your favorite books")
+
+    st.write(
+        "Upload a book that you like **OR** choose from a curated list of classic books "
+        "to learn new vocabulary and grammar. The app will adapt the content to your "
+        "language level and generate a PDF for you to download."
+    )
 
 # Initialize session state
 if "pages" not in st.session_state:
@@ -178,7 +185,7 @@ with st.container(border=True):
 
     # --- TAB 1: Select from list ---
     with col_list:
-        st.markdown("#### From Project Gutenberg list")
+        st.markdown("From Project Gutenberg list")
 
         # Load CSV
         books_df = load_books_from_csv("../data/books.csv")
@@ -206,10 +213,11 @@ with st.container(border=True):
         selected_book_id = st.selectbox(
             "Select a book",
             options=list(book_options.keys()),
+            index=None,
             format_func=lambda x: book_options[x],
         )
 
-        if st.button("Download Book"):
+        if selected_book_id:
             with st.spinner("Downloading book..."):
                 filepath = download_book(selected_book_id, book_options[selected_book_id])
                 if filepath:
@@ -224,11 +232,11 @@ with st.container(border=True):
             st.session_state.page = 0  # Reset to first page
 
     with col_empty:
-        st.markdown("#### or")
+        st.markdown("or")
 
     # --- TAB 2: Upload file ---
     with col_own:
-        st.markdown("#### Upload your own book")
+        st.markdown("Upload your own book")
 
         uploaded_file = st.file_uploader(
             "Upload your file", type=["md", "docx", "txt", "pdf"]
@@ -334,7 +342,7 @@ if st.session_state.can_process:
             if st.button("🎵 Listen"):
                 with st.spinner("Creating audio..."):
                     
-                    output_file = "./data/generated_audio.mp3"
+                    output_file = "./data/audio/generated_audio.mp3"
                     
                     # Generate audio (will auto-detect language)
                     text_to_audio(simplified_chunk, language=None, output_file=output_file)
