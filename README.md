@@ -18,11 +18,18 @@ python3 -m venv book_env
   ```
 
 ### 3. Install Dependencies
-Install the required libraries using the `requirements.txt` file:
+Install the required libraries using UV:
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
-
+To add new dependencies, use:
+```bash
+uv add <package_name>
+```
+or manually edit the `pyproject.toml` file and then run:
+```bash
+uv sync
+```
 ---
 
 ## Exemple: Running the Script
