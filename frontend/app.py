@@ -13,6 +13,8 @@ from pathlib import Path
 from difflib import SequenceMatcher
 from backend.simplification_gen import stream_response
 from backend.chunk_creation import create_chunks
+from backend.text_to_speech import text_to_audio
+from backend.ask_user_on_text import generate_question, provide_feedback
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -151,13 +153,20 @@ def load_books_from_csv(csv_path="../data/books.csv"):
 
 st.set_page_config(layout="wide")
 
-st.title("📘 Learn from your favorite books")
+# Header section: Icon + Title vertically aligned
 
-st.write(
-    "Upload a book that you like **OR** choose from a curated list of classic books "
-    "to learn new vocabulary and grammar. The app will adapt the content to your "
-    "language level and generate a PDF for you to download."
-)
+col1, col2 = st.columns([1, 5])  # Left column is narrower
+with col1:
+    st.image("frontend/easylearn_logo.png", width=150)  # Larger icon (adjust width as needed)
+
+with col2:
+    st.title("Learn from your favorite books")
+
+    st.write(
+        "Upload a book that you like **OR** choose from a curated list of classic books "
+        "to learn new vocabulary and grammar. The app will adapt the content to your "
+        "language level and generate a PDF for you to download."
+    )
 
 # Initialize session state
 if "pages" not in st.session_state:
@@ -168,6 +177,9 @@ if "page" not in st.session_state:
 
 if "can_process" not in st.session_state:
     st.session_state.can_process = False
+
+if "chunks" not in st.session_state:
+    st.session_state.chunks = []
 
 selected_book_id = None
 selected_book_title = None
@@ -181,7 +193,7 @@ with st.container(border=True):
 
     # --- TAB 1: Select from list ---
     with col_list:
-        st.markdown("#### From Project Gutenberg list")
+        st.markdown("From Project Gutenberg list")
 
         # Load CSV
         books_df = load_books_from_csv("../data/books.csv")
@@ -209,10 +221,11 @@ with st.container(border=True):
         selected_book_id = st.selectbox(
             "Select a book",
             options=list(book_options.keys()),
+            index=None,
             format_func=lambda x: book_options[x],
         )
 
-        if st.button("Download Book"):
+        if selected_book_id:
             with st.spinner("Downloading book..."):
                 filepath = download_book(selected_book_id, book_options[selected_book_id])
                 if filepath:
@@ -224,13 +237,14 @@ with st.container(border=True):
                     st.session_state["book_title"] = (
                         selected_book_title  # Save title in session state
                     )
+            selected_book_id = ""
 
     with col_empty:
-        st.markdown("#### or")
+        st.markdown("or")
 
     # --- TAB 2: Upload file ---
     with col_own:
-        st.markdown("#### Upload your own book")
+        st.markdown("Upload your own book")
 
         uploaded_file = st.file_uploader(
             "Upload your file", type=["md", "docx", "txt", "pdf"]
@@ -241,6 +255,7 @@ with st.container(border=True):
             st.session_state["book_title"] = uploaded_file.name.rsplit(".", 1)[0]
             st.session_state["selected_book_id"] = None
             st.session_state["selected_book_title"] = uploaded_file.name
+            uploaded_file = ""
 
 # --- Language level and translation target ---
 with st.container(border=True):
@@ -251,7 +266,7 @@ with st.container(border=True):
     with col1:
         level = st.selectbox(
             "Language Level",
-            ["A1", "A2", "B1", "B2", "C1", "C2"],
+            ["A2", "B1", "B2", "C1", "C2"],
             help="Choose the language proficiency level for simplification",
         )
 
@@ -276,41 +291,38 @@ with st.container(border=True):
                 f"Processing text for level {level} and translating to {target_language}..."
             )
             st.session_state.can_process = True
+            text = st.session_state["book_text"].strip()
+            st.session_state.chunks = create_chunks(text)
+            st.session_state.n_chunks = len(st.session_state.chunks)
+            st.session_state.pages = [""] * st.session_state.n_chunks
 
 
 if st.session_state.can_process:
     # Stream the processed text incrementally
-    text = st.session_state["book_text"].strip()
-    chunks = create_chunks(text)
 
     learning_mode = True
     if learning_mode:
-
-        n_chunks = len(chunks)
-        st.session_state.pages = [""] * n_chunks
+        simplified_chunk = ""
 
         # Navigation buttons
         col1, col2, col3 = st.columns([1, 4, 1])
 
         with col1:
-            if st.session_state.page > 0 and st.button("⬅ Previous") :
-                    st.session_state.page -= 1
+            if st.session_state.page > 0 and st.button("⬅ Previous"):
+                st.session_state.page -= 1
 
-        with col2:
-            st.write(f"### Page {st.session_state.page + 1}")
 
         with col3:
-            if st.session_state.page < n_chunks - 1 and st.button("Next ➡"):
+            if st.session_state.page < st.session_state.n_chunks - 1 and st.button("Next ➡"):
                 st.session_state.page += 1
 
         # Display the current page
-        page_idx = st.session_state.page
-        if st.session_state.pages[page_idx] == "":
+        if st.session_state.pages[st.session_state.page] == "":
             # First time visiting this page → stream & collect
             placeholder = st.empty()
-            simplified_chunk = ""
+            
             for token in stream_response(
-                [chunks[page_idx]],
+                [st.session_state.chunks[st.session_state.page]],
                 level,
                 target_language
             ):
@@ -318,14 +330,56 @@ if st.session_state.can_process:
                 # placeholder.write(simplified_chunk)
                 placeholder.markdown(f"<span style='color:white'>{simplified_chunk}</span>", unsafe_allow_html=True)
             
-            st.session_state.pages[page_idx] = simplified_chunk            
+            st.session_state.pages[st.session_state.page] = simplified_chunk    
+            
+
         else:
             # Already processed → just show stored result
-            simplified_chunk = st.session_state.pages[page_idx]
+            simplified_chunk = st.session_state.pages[st.session_state.page]
             st.write(simplified_chunk)
 
+
+        if simplified_chunk:
+            
+            # --- Audio Playback ---
+
+            if st.button("🎵 Listen"):
+                with st.spinner("Creating audio..."):
+                    
+                    output_file = "./data/audio/generated_audio.mp3"
+                    
+                    # Generate audio (will auto-detect language)
+                    text_to_audio(simplified_chunk, language=None, output_file=output_file)
+                    
+                    with open(output_file, "rb") as audio_file:
+                        audio_bytes = audio_file.read()
+                        st.audio(audio_bytes, format="audio/mpeg")
+                        st.success("Audio generated!")
+
+
+            if st.button("🧠 Ask me a question"):
+                with st.spinner("Generating question..."):
+                    question = generate_question(simplified_chunk, target_language) 
+                    print(f"DEBUG: Generated question: {question}")
+                    st.session_state["generated_question"] = question
+                    st.write(f"*Question:* {question}")
+
+            if "generated_question" in st.session_state:
+                user_response = st.text_area("Your answer:", placeholder="Type your answer here...")  # Added label
+                if st.button("Get Feedback"):
+                    if user_response.strip():
+                        with st.spinner("Providing feedback..."):
+                            feedback = provide_feedback(simplified_chunk, st.session_state["generated_question"], user_response, target_language)
+                            st.write(f"*Feedback:* {feedback}")
+                    else:
+                        st.warning("Please provide a response before getting feedback.")      
+
+
+        #-------------------------------------
+
+
     else:
-        st.write_stream(stream_response(chunks, level, target_language))
+        st.write_stream(stream_response(st.session_state.chunks, level, target_language))
 
     # Generate PDF
     pdf_file = create_pdf(simplified_chunk)  # Use the full text directly for PDF generation
