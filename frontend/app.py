@@ -95,8 +95,10 @@ def download_book(book_id, title, fmt="txt", save_dir="./data/books"):
         else:
             cleaned_text = text.strip()
 
-        # Replace all types of line breaks (including formatted ones) with a single line break
-        cleaned_text = re.sub(r"(\r\n|\r|\n){2,}", "\n\n", cleaned_text)
+        # Normalize all line breaks to '\n' and collapse multiple blank lines
+        cleaned_text = re.sub(r"\r\n?|\n", "\n", cleaned_text)
+        cleaned_text = re.sub(r"\n{2,}", "\n\n", cleaned_text)
+
         return cleaned_text
 
     urls = [
