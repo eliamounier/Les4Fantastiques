@@ -30,7 +30,6 @@ def stream_response(text: str, level: str, language: str = ""):
     •⁠  ⁠Simplify syntax and vocabulary to match {level} precisely
     •⁠  ⁠Keep original paragraph structure
     •⁠  ⁠Avoid bullet lists unless in the source text
-    •⁠  ⁠Explain up to 5 challenging words inline: (word: brief definition) - first occurrence only
     •⁠  ⁠Signal any omissions with [...] - keep minimal
     •⁠  ⁠Preserve proper nouns unchanged
     •⁠  ⁠Maintain the emotional tone and intent of any dialogue or quotes
@@ -44,8 +43,8 @@ def stream_response(text: str, level: str, language: str = ""):
 
     OUTPUT RULES (must follow strictly):
     • ONLY output the simplified passage text. 
-    • DO NOT include explanations, instructions, commentary, summaries, or any extra text.
-    • DO NOT repeat or summarize the original text.
+    • DO NOT include explanations, instructions, commentary, notes, summaries, or any extra text.
+    • DO NOT repeat or summarize the original text more that what you did to simplify it.
     • Output nothing other than the simplified passage itself.
     """
 
@@ -56,7 +55,7 @@ def stream_response(text: str, level: str, language: str = ""):
         the following passage in {language} and according to my level. Do not use any other language than {language}.
         The purpose is not to change the meaning, but to make it easier for me to understand.
         Use a friendly, story-like narrative style.
-        ONLY RETURN THE TRANSFORMED TEXT — no explanations, notes, or comments.
+        ONLY RETURN THE TRANSFORMED TEXT — Do not include explanations, notes, or comments.
 
         {f'''Here is previous passage as context:
         {past_response}
