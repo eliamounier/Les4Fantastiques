@@ -283,15 +283,68 @@ if st.button("Do your magic! ✨"):
 
 
 # --- Audio Playback ---
-st.write("### 🎧 Listen to the Audiobook")
+# st.write("### 🎧 Listen to the Audiobook")
 
-# Path to the audio file
-audio_file_path = "./data/audiobook_chapter1.mp3"
+# # Path to the audio file
+# audio_file_path = "./data/audiobook_fixed.mp3"
 
-with open(audio_file_path, "rb") as audio_file:
-    audio_bytes = audio_file.read()
-    st.audio(audio_bytes, format="audio/mpeg")
-    st.success("Enjoy listening to the audiobook!")
+# with open(audio_file_path, "rb") as audio_file:
+#     audio_bytes = audio_file.read()
+#     st.audio(audio_bytes, format="audio/mpeg")
+#     st.success("Enjoy listening to the audiobook!")
 
+
+# --- Audio Playback ---
+
+from backend.text_to_speech import text_to_audio
+
+#text = st.session_state.get("book_text", None)
+text = '''Le petit chat et la souris. La souris est grise. Le chat est noir.'''
+#text = None
+
+if text: 
+    #st.write("### 🎧 Listen to the Audiobook")
+    if st.button("🎵 Listen"):
+        with st.spinner("Creating audio..."):
+            
+            output_file = "./data/generated_audio.mp3"
+            
+            # Generate audio (will auto-detect language)
+            text_to_audio(text, language=None, output_file=output_file)
+            
+            with open(output_file, "rb") as audio_file:
+                audio_bytes = audio_file.read()
+                st.audio(audio_bytes, format="audio/mpeg")
+                st.success("Audio generated!")
 
 # -------------------------------
+
+
+# --- Test Your Understanding with Sample Text ---
+
+from backend.ask_user_on_text import generate_question, provide_feedback        
+
+#text = st.session_state.get("book_text", None)
+text = '''Le petit chat et la souris. La souris est grise. Le chat est noir.'''
+language_user_is_learning = "English" 
+
+if text:
+    if st.button("🧠 Ask me a question"):
+        with st.spinner("Generating question..."):
+            question = generate_question(text, language_user_is_learning) 
+            print(f"DEBUG: Generated question: {question}")
+            st.session_state["generated_question"] = question
+            st.write(f"**Question:** {question}")
+
+    if "generated_question" in st.session_state:
+        user_response = st.text_area("Your answer:", placeholder="Type your answer here...")  # Added label
+        if st.button("Get Feedback"):
+            if user_response.strip():
+                with st.spinner("Providing feedback..."):
+                    feedback = provide_feedback(text, st.session_state["generated_question"], user_response, language_user_is_learning)
+                    st.write(f"**Feedback:** {feedback}")
+            else:
+                st.warning("Please provide a response before getting feedback.")      
+
+
+#-------------------------------------
