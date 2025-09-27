@@ -259,20 +259,20 @@ with st.container(border=True):
 
 # --- Language level and translation target ---
 with st.container(border=True):
-    st.write("### Choose Processing Options")
+    st.write("### Learning goals")
 
     col1, col2 = st.columns([1, 2])  # Left column is narrower
 
     with col1:
         level = st.selectbox(
-            "Language Level",
+            "My language level",
             ["A2", "B1", "B2", "C1", "C2"],
             help="Choose the language proficiency level for simplification",
         )
 
     with col2:
         target_language = st.text_input(
-            "Target Language",
+            "Language I want to learn",
             placeholder="e.g., Spanish, French, German",
             help="Enter the language to translate the text into",
         )
