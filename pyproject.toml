@@ -15,6 +15,7 @@ dependencies = [
     "debugpy==1.8.17",
     "decorator==5.2.1",
     "distro==1.9.0",
+    "dotenv==0.9.9",
     "executing==2.2.1",
     "filelock==3.19.1",
     "fsspec==2025.9.0",

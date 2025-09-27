@@ -57,19 +57,20 @@ python3 -m venv book_env
   ```
 
 ### 3. Install Dependencies
-Install the required libraries using the `requirements.txt` file:
+Install the required libraries using UV:
 ```bash
-# Using pip
-pip install -r requirements.txt
-
-# OR using uv
 uv sync
 ```
-> Note : To update the lock file when requirements.txt changes:
+To add new dependencies, use:
+```bash
+uv add <package_name>
 ```
-uv add -r requirements.txt
+or manually edit the `pyproject.toml` file and then run:
+```bash
+uv sync
 ```
 ---
+
 
 ## ▶️ Running the Script
 
@@ -77,7 +78,6 @@ Once the environment is set up, run the Streamlit app:
 ```bash
 python -m streamlit run frontend/app.py
 ```
-
 ---
 
 ## 🛑 Deactivating the Virtual Environment
