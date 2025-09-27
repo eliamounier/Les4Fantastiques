@@ -13,6 +13,9 @@ __pycache__/
 data/
 outputs/
 
+# Environments
+.env
+
 # OS
 .DS_Store
 Thumbs.db

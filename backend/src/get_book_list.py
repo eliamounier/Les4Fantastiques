@@ -4,25 +4,37 @@ import os
 import argparse
 
 
-def query_books(nb_books: int = 100):
-    """Query Gutendex API and return a list of books (id, name_author, language)."""
+def query_books(nb_books: int = 100, languages: list = ["en", "fr", "it", "de", "es"]):
+    """
+    Query Gutendex API and return a list of books (id, name_author).
+    Fetches an equal number of books for each specified language.
+    """
     books = []
-    url = "https://gutendex.com/books/"
+    books_per_language = nb_books // len(languages)
 
-    while len(books) < nb_books and url:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
+    for language in languages:
+        url = f"https://gutendex.com/books/?languages={language}"
+        language_books = []
 
-        for book in data["results"]:
-            book_id = book["id"]
-            name_author = f"{book['title']} - {', '.join(a['name'] for a in book['authors'])} - {book['languages'][0]}"
-            books.append({"id": book_id, "name_author": name_author})
+        while len(language_books) < books_per_language and url:
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
 
-            if len(books) >= nb_books:
-                break
+            for book in data["results"]:
+                book_id = book["id"]
+                name_author = f"{book['title']} - {', '.join(a['name'] for a in book['authors'])} - {language}"
+                language_books.append({"id": book_id, "name_author": name_author})
 
-        print(f"Prepared {len(books)} books so far...")
+                if len(language_books) >= books_per_language:
+                    break
+
+            print(
+                f"Prepared {len(language_books)} books for language '{language}' so far..."
+            )
+            url = data.get("next")  # Get the next page URL
+
+        books.extend(language_books)
 
     return books
 
@@ -32,7 +44,7 @@ def save_books(books, csv_file: str):
     os.makedirs(os.path.dirname(csv_file), exist_ok=True)
 
     with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=["id", "name_author", "language"])
+        writer = csv.DictWriter(file, fieldnames=["id", "name_author"])
         writer.writeheader()
         writer.writerows(books)
 
@@ -58,7 +70,9 @@ def main():
     )
     args = parser.parse_args()
 
-    books = query_books(nb_books=args.nb_books)
+    books = query_books(
+        nb_books=args.nb_books, languages=["en", "fr", "it", "de", "es"]
+    )
     save_books(books, args.output)
 
 
