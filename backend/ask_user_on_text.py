@@ -14,7 +14,7 @@ def generate_question(text, language):
         language (str): The language in which the question should be asked.
 
     Returns:
-        None
+        str: The generated question
     """
     system_prompt = f"""
     You are a teaching assistant specialized in language comprehension. You need to test the user on their understanding of the following text. 
@@ -44,8 +44,14 @@ def generate_question(text, language):
         stream=True
     )
 
+    # Collect the streamed response
+    question = ""
     for chunk in stream:
-        print(chunk.choices[0].delta.content or "", end="", flush=True)
+        content = chunk.choices[0].delta.content or ""
+        question += content
+        print(content, end="", flush=True)  # Keep console output for debugging
+    
+    return question.strip()  # Return the complete question
 
 
 def provide_feedback(text, question, user_response, language):
@@ -59,7 +65,7 @@ def provide_feedback(text, question, user_response, language):
         language (str): The language in which the feedback should be provided.
 
     Returns:
-        None
+        str: The feedback response
     """
     system_prompt = f"""
     You are a teaching assistant specialized in language comprehension. Your job is to evaluate the my response to a question based on the given text. 
@@ -93,10 +99,15 @@ def provide_feedback(text, question, user_response, language):
         stream=True
     )
 
+    # Collect the streamed response
     feedback = ""
     for chunk in stream:
-        feedback += chunk.choices[0].delta.content or ""
-        print(chunk.choices[0].delta.content or "", end="", flush=True)
+        content = chunk.choices[0].delta.content or ""
+        feedback += content
+        print(content, end="", flush=True)  # Keep console output for debugging
+    
+    return feedback.strip()  # Return the complete feedback
+
 
 def main():
     TEXT = '''CHAPTER I: JONATHAN HARKER'S JOURNAL
@@ -131,12 +142,16 @@ def main():
 
     print("\nGenerating a question based on the text...\n")
     question = generate_question(TEXT, LANGUAGE_FOR_USER)
+    
+    print(f"\nQuestion: {question}")
 
     # Simulate a user's response
     user_response = input("\nEnter your response to the question: ")
 
     print("\nProviding feedback on the user's response...\n")
-    provide_feedback(TEXT, question, user_response, LANGUAGE_FOR_USER)
+    feedback = provide_feedback(TEXT, question, user_response, LANGUAGE_FOR_USER)
+    
+    print(f"\nFeedback: {feedback}")
 
 if __name__ == "__main__":
     main()

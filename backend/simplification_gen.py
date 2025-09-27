@@ -1,6 +1,5 @@
 import os
 import openai
-from backend.chunk_creation import create_chunks
 from dotenv import load_dotenv
 
 
@@ -10,14 +9,13 @@ MAX_TOKEN = 6000
 
 
 client = openai.OpenAI(
-    api_key="icPsVlyhOnw2vmGCBvkJFv6pxfh6",
+    api_key=os.getenv("SWISS_AI_PLATFORM_API_KEY"),
     base_url="https://api.swisscom.com/layer/swiss-ai-weeks/apertus-70b/v1",
 )
 
 
-def stream_response(text: str, level: str, language: str = ""):
 
-    chunks = create_chunks(text)
+def stream_response(chunks: list, level: str, language: str = ""):
 
     system_prompt = f"""
     You are a patient education assistant fluent in many languages who simplifies book passages that you have been given so language learners can read with comfort and joy.
