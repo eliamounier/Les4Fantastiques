@@ -59,9 +59,16 @@ python3 -m venv book_env
 ### 3. Install Dependencies
 Install the required libraries using the `requirements.txt` file:
 ```bash
+# Using pip
 pip install -r requirements.txt
-```
 
+# OR using uv
+uv sync
+```
+> Note : To update the lock file when requirements.txt changes:
+```
+uv add -r requirements.txt
+```
 ---
 
 ## ▶️ Running the Script
