@@ -20,15 +20,15 @@ python3 -m venv book_env
 ### 3. Install Dependencies
 Install the required libraries using UV:
 ```bash
-uv sync
+uv sync --active
 ```
 To add new dependencies, use:
 ```bash
-uv add <package_name>
+uv add <package_name> --active
 ```
 or manually edit the `pyproject.toml` file and then run:
 ```bash
-uv sync
+uv sync --active
 ```
 ---
 
