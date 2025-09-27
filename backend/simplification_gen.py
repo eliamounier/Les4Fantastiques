@@ -9,7 +9,7 @@ LEVEL = "B2"
 
 
 client = openai.OpenAI(
-    api_key="icPsVlyhOnw2vmGCBvkJFv6pxfh6",
+    api_key=os.getenv("SWISS_AI_PLATFORM_API_KEY"),
     base_url="https://api.swisscom.com/layer/swiss-ai-weeks/apertus-70b/v1",
 )
 
