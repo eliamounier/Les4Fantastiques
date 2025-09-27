@@ -12,7 +12,7 @@ __pycache__/
 # données
 outputs/
 data/books/
-data/audio/
+data/audio/*.mp3
 
 # Environments
 .env
