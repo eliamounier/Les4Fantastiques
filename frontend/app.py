@@ -13,6 +13,8 @@ from pathlib import Path
 from difflib import SequenceMatcher
 from backend.simplification_gen import stream_response
 from backend.chunk_creation import create_chunks
+from backend.text_to_speech import text_to_audio
+from backend.ask_user_on_text import generate_question, provide_feedback
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -219,6 +221,7 @@ with st.container(border=True):
                     st.session_state["book_title"] = (
                         selected_book_title  # Save title in session state
                     )
+            st.session_state.page = 0  # Reset to first page
 
     with col_empty:
         st.markdown("#### or")
@@ -236,6 +239,7 @@ with st.container(border=True):
             st.session_state["book_title"] = uploaded_file.name.rsplit(".", 1)[0]
             st.session_state["selected_book_id"] = None
             st.session_state["selected_book_title"] = uploaded_file.name
+            st.session_state.page = 0  # Reset to first page
 
 # --- Language level and translation target ---
 with st.container(border=True):
@@ -280,6 +284,7 @@ if st.session_state.can_process:
 
     learning_mode = True
     if learning_mode:
+        simplified_chunk = ""
 
         n_chunks = len(chunks)
         st.session_state.pages = [""] * n_chunks
@@ -303,7 +308,7 @@ if st.session_state.can_process:
         if st.session_state.pages[page_idx] == "":
             # First time visiting this page → stream & collect
             placeholder = st.empty()
-            simplified_chunk = ""
+            
             for token in stream_response(
                 [chunks[page_idx]],
                 level,
@@ -313,11 +318,53 @@ if st.session_state.can_process:
                 # placeholder.write(simplified_chunk)
                 placeholder.markdown(f"<span style='color:white'>{simplified_chunk}</span>", unsafe_allow_html=True)
             
-            st.session_state.pages[page_idx] = simplified_chunk            
+            st.session_state.pages[page_idx] = simplified_chunk    
+            
+
         else:
             # Already processed → just show stored result
             simplified_chunk = st.session_state.pages[page_idx]
             st.write(simplified_chunk)
+
+
+        if simplified_chunk:
+            
+            # --- Audio Playback ---
+
+            if st.button("🎵 Listen"):
+                with st.spinner("Creating audio..."):
+                    
+                    output_file = "./data/generated_audio.mp3"
+                    
+                    # Generate audio (will auto-detect language)
+                    text_to_audio(simplified_chunk, language=None, output_file=output_file)
+                    
+                    with open(output_file, "rb") as audio_file:
+                        audio_bytes = audio_file.read()
+                        st.audio(audio_bytes, format="audio/mpeg")
+                        st.success("Audio generated!")
+
+
+            if st.button("🧠 Ask me a question"):
+                with st.spinner("Generating question..."):
+                    question = generate_question(text, target_language) 
+                    print(f"DEBUG: Generated question: {question}")
+                    st.session_state["generated_question"] = question
+                    st.write(f"*Question:* {question}")
+
+            if "generated_question" in st.session_state:
+                user_response = st.text_area("Your answer:", placeholder="Type your answer here...")  # Added label
+                if st.button("Get Feedback"):
+                    if user_response.strip():
+                        with st.spinner("Providing feedback..."):
+                            feedback = provide_feedback(text, st.session_state["generated_question"], user_response, target_language)
+                            st.write(f"*Feedback:* {feedback}")
+                    else:
+                        st.warning("Please provide a response before getting feedback.")      
+
+
+        #-------------------------------------
+
 
     else:
         st.write_stream(stream_response(chunks, level, target_language))
